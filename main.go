@@ -1,8 +1,9 @@
-package plan_api
+package main
 
 import (
 	"fmt"
 	"github.com/gorilla/mux"
+	"github.com/gunni1/plan-api/api"
 	"gopkg.in/mgo.v2"
 	"log"
 	"net/http"
@@ -30,7 +31,10 @@ func main() {
 		Router:  mux.NewRouter(),
 		Session: session,
 	}
-
+	server.Routes()
+	addr := "0.0.0.0:8080"
+	log.Printf("Starting listening on %s", addr)
+	log.Fatal(http.ListenAndServe(addr, server.Router))
 }
 
 func index(response http.ResponseWriter, request *http.Request) {

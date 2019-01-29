@@ -1,27 +1,36 @@
 package plan_api
 
 import (
-	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
+	"gopkg.in/mgo.v2"
 	"log"
 	"net/http"
-	"whoscoming/mongodb"
+	"os"
+)
+
+const (
+	dbEnv = "PLAN_DB_URL"
 )
 
 func main() {
-	dbUrl := flag.String("mongodb", "localhost:27017", "Connection String to a MongoDB")
-	apiPort := flag.String("apiPort", "7000", "REST API Port")
-	flag.Parse()
+	mgoUrl := os.Getenv(dbEnv)
+	if mgoUrl == "" {
+		log.Fatalf("Environment variable %s is empty", dbEnv)
+	}
 
-	router := mux.NewRouter().StrictSlash(true)
-	router.HandleFunc("/", index)
-
-	session := mongodb.OpenDbConnection(*dbUrl)
+	session, err := mgo.Dial(mgoUrl)
+	if err != nil {
+		log.Fatalf("Unable to establish DB connection to %s: %s", mgoUrl, err)
+	}
 	defer session.Close()
+	log.Printf("DB connection established at %s", mgoUrl)
 
-	fmt.Println("REST API listening on " + *apiPort)
-	log.Fatal(http.ListenAndServe(":"+*apiPort, router))
+	server := api.Server{
+		Router:  mux.NewRouter(),
+		Session: session,
+	}
+
 }
 
 func index(response http.ResponseWriter, request *http.Request) {

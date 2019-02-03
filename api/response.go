@@ -10,6 +10,10 @@ type Response struct {
 	Data   interface{}
 }
 
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
 func NewResponse(status int, data interface{}) Response {
 	return Response{
 		Status: status,
@@ -25,8 +29,12 @@ func (r Response) SendJSON(w http.ResponseWriter) {
 		status := http.StatusInternalServerError
 		w.WriteHeader(status)
 		r.Status = status
-		r.Data = err.Error()
+		r.Data = ErrorResponse{Error: err.Error()}
 
 		_ = json.NewEncoder(w).Encode(r.Data)
 	}
+}
+
+func SendErrorJSON(status int, errorKey string, w http.ResponseWriter) {
+	NewResponse(status, ErrorResponse{errorKey}).SendJSON(w)
 }

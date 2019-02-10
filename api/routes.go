@@ -1,6 +1,9 @@
 package api
 
-import "net/http"
+import (
+	"github.com/rs/cors"
+	"net/http"
+)
 
 type Route struct {
 	Method      string
@@ -30,9 +33,21 @@ func (s *Server) Routes() {
 		var handler http.HandlerFunc
 		handler = route.HandlerFunc
 		handler = Logger(handler)
+
+		//CORS Header
+		c := cors.New(cors.Options{
+			AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
+			AllowedOrigins:     []string{"http://localhost:4200"},
+			AllowCredentials:   true,
+			AllowedHeaders:     []string{"Content-Type", "Bearer", "Bearer ", "content-type", "Origin", "Accept"},
+			OptionsPassthrough: true,
+		})
+
+		//Options explizit immer erlauben für Preflight-Check
 		s.Router.
-			Methods(route.Method).
+			Methods(route.Method, "OPTIONS").
 			Path(route.Pattern).
-			Handler(handler)
+			Handler(c.Handler(handler))
+
 	}
 }

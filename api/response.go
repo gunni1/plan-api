@@ -23,6 +23,10 @@ func NewResponse(status int, data interface{}) Response {
 
 func (r Response) SendJSON(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/JSON; charset=UTF-8")
+	//Testing
+	//w.Header().Set("Access-Control-Allow-Origin", "*")
+	//w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	//w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	w.WriteHeader(r.Status)
 
 	if err := json.NewEncoder(w).Encode(r.Data); err != nil {

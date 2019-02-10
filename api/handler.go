@@ -43,8 +43,8 @@ func (s *Server) GetPlan() http.HandlerFunc {
 	}
 }
 
-// Creates a Plan by given json
-func (s *Server) CreatePlan() http.HandlerFunc {
+// Saves a a given Json as a Plan
+func (s *Server) SavePlan() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var requestDto Plan
 		decodeErr := json.NewDecoder(r.Body).Decode(&requestDto)
@@ -55,18 +55,21 @@ func (s *Server) CreatePlan() http.HandlerFunc {
 		dbSession := s.Session.Copy()
 		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
 
-		dataDto := Plan{
-			Id:        bson.NewObjectId(),
-			Title:     requestDto.Title,
-			Practices: requestDto.Practices,
+		//Insert or Update?
+		var saveError error
+		if requestDto.Id == "" {
+			requestDto.Id = bson.NewObjectId()
+			saveError = plans.Insert(&requestDto)
+		} else {
+			saveError = plans.UpdateId(requestDto.Id, &requestDto)
 		}
-		err := plans.Insert(&dataDto)
-		if err != nil {
-			SendErrorJSON(http.StatusInternalServerError, err.Error(), w)
+
+		if saveError != nil {
+			SendErrorJSON(http.StatusInternalServerError, saveError.Error(), w)
 			return
 		}
 
-		NewResponse(http.StatusOK, dataDto).SendJSON(w)
+		NewResponse(http.StatusOK, requestDto).SendJSON(w)
 		return
 	}
 }

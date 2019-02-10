@@ -25,7 +25,7 @@ func (s *Server) Routes() {
 		Route{
 			Method:      "POST",
 			Pattern:     "/plan",
-			HandlerFunc: s.CreatePlan(),
+			HandlerFunc: s.SavePlan(),
 		},
 	}
 

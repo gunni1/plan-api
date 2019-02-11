@@ -29,23 +29,23 @@ func (s *Server) Routes() {
 		},
 	}
 
+	//CORS Header
+	c := cors.New(cors.Options{
+		AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowedOrigins:     []string{"http://localhost:4200"},
+		AllowCredentials:   true,
+		AllowedHeaders:     []string{"Content-Type", "Bearer", "Bearer ", "content-type", "Origin", "Accept"},
+		OptionsPassthrough: true,
+	})
+	s.Router.Methods("OPTIONS").Handler(c.Handler(s.preflight()))
+
 	for _, route := range routes {
 		var handler http.HandlerFunc
 		handler = route.HandlerFunc
 		handler = Logger(handler)
 
-		//CORS Header
-		c := cors.New(cors.Options{
-			AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
-			AllowedOrigins:     []string{"http://localhost:4200"},
-			AllowCredentials:   true,
-			AllowedHeaders:     []string{"Content-Type", "Bearer", "Bearer ", "content-type", "Origin", "Accept"},
-			OptionsPassthrough: true,
-		})
-
-		//Options explizit immer erlauben für Preflight-Check
 		s.Router.
-			Methods(route.Method, "OPTIONS").
+			Methods(route.Method).
 			Path(route.Pattern).
 			Handler(c.Handler(handler))
 

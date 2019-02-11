@@ -73,3 +73,11 @@ func (s *Server) SavePlan() http.HandlerFunc {
 		return
 	}
 }
+
+// On Preflight request, just send 200
+func (s *Server) preflight() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+}

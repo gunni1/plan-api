@@ -61,23 +61,16 @@ func (s *Server) SavePlan() http.HandlerFunc {
 			requestDto.Id = bson.NewObjectId()
 			saveError = plans.Insert(&requestDto)
 		} else {
+			//TODO Panic wenn sich aus gegebener ID keine ObjectID machen lässt
 			saveError = plans.UpdateId(requestDto.Id, &requestDto)
 		}
 
 		if saveError != nil {
-			SendErrorJSON(http.StatusInternalServerError, saveError.Error(), w)
+			SendErrorJSON(http.StatusBadRequest, ERR_NO_PLAN_FOUND, w)
 			return
 		}
 
 		NewResponse(http.StatusOK, requestDto).SendJSON(w)
-		return
-	}
-}
-
-// On Preflight request, just send 200
-func (s *Server) preflight() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
 		return
 	}
 }

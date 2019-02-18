@@ -1,7 +1,6 @@
 package api
 
 import (
-	"github.com/rs/cors"
 	"net/http"
 )
 
@@ -29,16 +28,6 @@ func (s *Server) Routes() {
 		},
 	}
 
-	//CORS Header
-	c := cors.New(cors.Options{
-		AllowedMethods:     []string{"GET", "POST", "OPTIONS"},
-		AllowedOrigins:     []string{"http://localhost:4200"},
-		AllowCredentials:   true,
-		AllowedHeaders:     []string{"Content-Type", "Bearer", "Bearer ", "content-type", "Origin", "Accept"},
-		OptionsPassthrough: true,
-	})
-	s.Router.Methods("OPTIONS").Handler(c.Handler(s.preflight()))
-
 	for _, route := range routes {
 		var handler http.HandlerFunc
 		handler = route.HandlerFunc
@@ -47,7 +36,7 @@ func (s *Server) Routes() {
 		s.Router.
 			Methods(route.Method).
 			Path(route.Pattern).
-			Handler(c.Handler(handler))
+			Handler(handler)
 
 	}
 }

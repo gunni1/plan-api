@@ -26,6 +26,11 @@ func (s *Server) Routes() {
 			Pattern:     "/plan",
 			HandlerFunc: s.SavePlan(),
 		},
+		Route{
+			Method:      "PUT",
+			Pattern:     "/plan/{planId}",
+			HandlerFunc: s.UpdatePlan(),
+		},
 	}
 
 	for _, route := range routes {

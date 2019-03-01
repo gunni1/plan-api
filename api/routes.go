@@ -31,6 +31,11 @@ func (s *Server) Routes() {
 			Pattern:     "/plan/{planId}",
 			HandlerFunc: s.UpdatePlan(),
 		},
+		Route{
+			Method:      "GET",
+			Pattern:     "/userplans/{userId}",
+			HandlerFunc: s.GetUserPlans(),
+		},
 	}
 
 	for _, route := range routes {

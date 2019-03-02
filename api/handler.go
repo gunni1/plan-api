@@ -36,6 +36,10 @@ type UserFavorites struct {
 	FavoritePlans []string `bson:"favoritePlans"`
 }
 
+type AddFavorite struct {
+	PlanId string `json:"planId"`
+}
+
 // Retrieves a single Plan from the db
 func (s *Server) GetPlan() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -129,10 +133,61 @@ func (s *Server) GetUserPlans() http.HandlerFunc {
 	}
 }
 
+// Gets the List of all favorite plans added by a given user.
+// If the user has no favorites yet, returns a empty array
 func (s *Server) GetUsersFavorites() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		parameters := mux.Vars(r)
-		userId := parameters["userId"]
+		userId := mux.Vars(r)["userId"]
+
+		favorites := s.Session.Copy().DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+		var userFavorites UserFavorites
+		findErr := favorites.FindId(userId).One(&userFavorites)
+		if findErr != nil {
+			NewResponse(http.StatusOK, []UserFavorites{}).SendJSON(w)
+		} else {
+			NewResponse(http.StatusOK, userFavorites.FavoritePlans).SendJSON(w)
+		}
+	}
+}
+
+// Add a planId to the List of users favorites
+func (s *Server) AddFavorite() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := mux.Vars(r)["userId"]
+		var addFavDto AddFavorite
+		decodeErr := json.NewDecoder(r.Body).Decode(&addFavDto)
+		if decodeErr != nil {
+			SendErrorJSON(http.StatusBadRequest, decodeErr.Error(), w)
+			return
+		}
+		favorites := s.Session.Copy().DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+		var userFavorites UserFavorites
+		findErr := favorites.FindId(userId).One(&userFavorites)
+		if findErr != nil {
+			userFavorites = UserFavorites{
+				UserId:        userId,
+				FavoritePlans: []string{addFavDto.PlanId},
+			}
+			//TODO: add userFavorites entry
+			insertErr := favorites.Insert(&userFavorites)
+			if insertErr != nil {
+				SendErrorJSON(http.StatusInternalServerError, insertErr.Error(), w)
+			} else {
+				NewResponse(http.StatusOK, userFavorites).SendJSON(w)
+			}
+		} else {
+			userFavorites.FavoritePlans = append(userFavorites.FavoritePlans, addFavDto.PlanId)
+			favorites.UpdateId(userId, userFavorites)
+			NewResponse(http.StatusOK, userFavorites).SendJSON(w)
+		}
+	}
+}
+
+// Remove a planId of the List of users favorites
+func (s *Server) DelFavorite() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userId := mux.Vars(r)["userId"]
+		planId := mux.Vars(r)["planId"]
 
 		favorites := s.Session.Copy().DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
 		var userFavorites UserFavorites
@@ -140,9 +195,26 @@ func (s *Server) GetUsersFavorites() http.HandlerFunc {
 		if findErr != nil {
 			SendErrorJSON(http.StatusBadRequest, ERR_NO_FAVORITES_FOR_USER, w)
 		} else {
-			NewResponse(http.StatusOK, userFavorites.FavoritePlans).SendJSON(w)
+			index := getIndex(userFavorites.FavoritePlans, planId)
+			if index == -1 {
+				SendErrorJSON(http.StatusBadRequest, ERR_FAVORITE_NOT_FOUND, w)
+			} else {
+				newFavorites := append(userFavorites.FavoritePlans[:index], userFavorites.FavoritePlans[index+1:]...)
+				userFavorites.FavoritePlans = newFavorites
+				favorites.UpdateId(userId, userFavorites)
+				NewResponse(http.StatusOK, userFavorites).SendJSON(w)
+			}
 		}
 	}
+}
+
+func getIndex(s []string, e string) int {
+	for i, v := range s {
+		if v == e {
+			return i
+		}
+	}
+	return -1
 }
 
 func hasPlan(plans *mgo.Collection, planId bson.ObjectId) bool {

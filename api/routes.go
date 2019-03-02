@@ -36,6 +36,21 @@ func (s *Server) Routes() {
 			Pattern:     "/userplans/{userId}",
 			HandlerFunc: s.GetUserPlans(),
 		},
+		Route{
+			Method:      "GET",
+			Pattern:     "/userfav/{userId}",
+			HandlerFunc: s.GetUsersFavorites(),
+		},
+		Route{
+			Method:      "POST",
+			Pattern:     "/userfav/{userId}/plan",
+			HandlerFunc: s.AddFavorite(),
+		},
+		Route{
+			Method:      "DELETE",
+			Pattern:     "/userfav/{userId}/plan/{planId}",
+			HandlerFunc: s.DelFavorite(),
+		},
 	}
 
 	for _, route := range routes {

@@ -135,17 +135,37 @@ func (s *Server) GetUserPlans() http.HandlerFunc {
 
 // Gets the List of all favorite plans added by a given user.
 // If the user has no favorites yet, returns a empty array
+// Optional Parameter controls if only the PlanIds should given back
 func (s *Server) GetUsersFavorites() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := mux.Vars(r)["userId"]
+		onlyIds := r.URL.Query().Get("onlyIds")
 
-		favorites := s.Session.Copy().DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+		dbSession := s.Session.Copy()
+		favorites := dbSession.DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
 		var userFavorites UserFavorites
 		findErr := favorites.FindId(userId).One(&userFavorites)
 		if findErr != nil {
+			//If no Favorites created yet, return a empty array
 			NewResponse(http.StatusOK, []UserFavorites{}).SendJSON(w)
 		} else {
-			NewResponse(http.StatusOK, userFavorites.FavoritePlans).SendJSON(w)
+			if onlyIds == "true" {
+				NewResponse(http.StatusOK, userFavorites.FavoritePlans).SendJSON(w)
+			} else {
+				//Get All plans of favorite Ids and Collect them as Result
+				plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
+				planIds := make([]bson.ObjectId, len(userFavorites.FavoritePlans))
+				for i := range planIds {
+					planIds[i] = bson.ObjectIdHex(userFavorites.FavoritePlans[i])
+				}
+				var favPlans []Plan
+				favPlanErr := plans.Find(bson.M{"_id": bson.M{"$in": planIds}}).All(&favPlans)
+				if favPlanErr != nil {
+					SendErrorJSON(http.StatusInternalServerError, favPlanErr.Error(), w)
+				} else {
+					NewResponse(http.StatusOK, favPlans).SendJSON(w)
+				}
+			}
 		}
 	}
 }
@@ -168,17 +188,16 @@ func (s *Server) AddFavorite() http.HandlerFunc {
 				UserId:        userId,
 				FavoritePlans: []string{addFavDto.PlanId},
 			}
-			//TODO: add userFavorites entry
 			insertErr := favorites.Insert(&userFavorites)
 			if insertErr != nil {
 				SendErrorJSON(http.StatusInternalServerError, insertErr.Error(), w)
 			} else {
-				NewResponse(http.StatusOK, userFavorites).SendJSON(w)
+				NewResponse(http.StatusOK, userFavorites.FavoritePlans).SendJSON(w)
 			}
 		} else {
 			userFavorites.FavoritePlans = append(userFavorites.FavoritePlans, addFavDto.PlanId)
 			favorites.UpdateId(userId, userFavorites)
-			NewResponse(http.StatusOK, userFavorites).SendJSON(w)
+			NewResponse(http.StatusOK, userFavorites.FavoritePlans).SendJSON(w)
 		}
 	}
 }
@@ -202,7 +221,7 @@ func (s *Server) DelFavorite() http.HandlerFunc {
 				newFavorites := append(userFavorites.FavoritePlans[:index], userFavorites.FavoritePlans[index+1:]...)
 				userFavorites.FavoritePlans = newFavorites
 				favorites.UpdateId(userId, userFavorites)
-				NewResponse(http.StatusOK, userFavorites).SendJSON(w)
+				NewResponse(http.StatusOK, userFavorites.FavoritePlans).SendJSON(w)
 			}
 		}
 	}

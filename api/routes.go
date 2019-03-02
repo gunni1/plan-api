@@ -7,6 +7,7 @@ import (
 type Route struct {
 	Method      string
 	Pattern     string
+	Queries     string
 	HandlerFunc http.HandlerFunc
 }
 

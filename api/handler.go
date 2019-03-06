@@ -96,8 +96,8 @@ func (s *Server) UpdatePlan() http.HandlerFunc {
 		var requestDto Plan
 		decodeErr := json.NewDecoder(r.Body).Decode(&requestDto)
 		if decodeErr != nil {
-			return
 			SendErrorJSON(http.StatusBadRequest, decodeErr.Error(), w)
+			return
 		}
 		planObjectId := bson.ObjectIdHex(planId)
 		plans := s.Session.Copy().DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
@@ -123,7 +123,7 @@ func (s *Server) GetUserPlans() http.HandlerFunc {
 		userId := parameters["userId"]
 
 		plans := s.Session.Copy().DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
-		var userPlans []Plan
+		userPlans := []Plan{}
 		findErr := plans.Find(bson.M{"createdBy": userId}).Sort("title").All(&userPlans)
 		if findErr != nil {
 			SendErrorJSON(http.StatusInternalServerError, findErr.Error(), w)
@@ -158,7 +158,7 @@ func (s *Server) GetUsersFavorites() http.HandlerFunc {
 				for i := range planIds {
 					planIds[i] = bson.ObjectIdHex(userFavorites.FavoritePlans[i])
 				}
-				var favPlans []Plan
+				favPlans := []Plan{}
 				favPlanErr := plans.Find(bson.M{"_id": bson.M{"$in": planIds}}).All(&favPlans)
 				if favPlanErr != nil {
 					SendErrorJSON(http.StatusInternalServerError, favPlanErr.Error(), w)

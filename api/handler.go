@@ -50,7 +50,9 @@ func (s *Server) GetPlan() http.HandlerFunc {
 			return
 		}
 		var planDto Plan
-		plans := s.Session.Copy().DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
+		dbSession := s.Session.Copy()
+		defer dbSession.Close()
+		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
 		err := plans.FindId(bson.ObjectIdHex(planId)).One(&planDto)
 		if err != nil {
 			SendErrorJSON(http.StatusBadRequest, ERR_NO_PLAN_FOUND, w)
@@ -71,7 +73,9 @@ func (s *Server) SavePlan() http.HandlerFunc {
 			SendErrorJSON(http.StatusBadRequest, decodeErr.Error(), w)
 			return
 		}
-		plans := s.Session.Copy().DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
+		dbSession := s.Session.Copy()
+		defer dbSession.Close()
+		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
 
 		requestDto.Id = bson.NewObjectId()
 		saveError := plans.Insert(&requestDto)
@@ -100,7 +104,10 @@ func (s *Server) UpdatePlan() http.HandlerFunc {
 			return
 		}
 		planObjectId := bson.ObjectIdHex(planId)
-		plans := s.Session.Copy().DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
+
+		dbSession := s.Session.Copy()
+		defer dbSession.Close()
+		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
 
 		if hasPlan(plans, planObjectId) {
 			requestDto.Id = planObjectId
@@ -122,7 +129,10 @@ func (s *Server) GetUserPlans() http.HandlerFunc {
 		parameters := mux.Vars(r)
 		userId := parameters["userId"]
 
-		plans := s.Session.Copy().DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
+		dbSession := s.Session.Copy()
+		defer dbSession.Close()
+		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
+
 		userPlans := []Plan{}
 		findErr := plans.Find(bson.M{"createdBy": userId}).Sort("title").All(&userPlans)
 		if findErr != nil {
@@ -142,7 +152,9 @@ func (s *Server) GetUsersFavorites() http.HandlerFunc {
 		onlyIds := r.URL.Query().Get("onlyIds")
 
 		dbSession := s.Session.Copy()
+		defer dbSession.Close()
 		favorites := dbSession.DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+
 		var userFavorites UserFavorites
 		findErr := favorites.FindId(userId).One(&userFavorites)
 		if findErr != nil {
@@ -180,7 +192,11 @@ func (s *Server) AddFavorite() http.HandlerFunc {
 			SendErrorJSON(http.StatusBadRequest, decodeErr.Error(), w)
 			return
 		}
-		favorites := s.Session.Copy().DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+
+		dbSession := s.Session.Copy()
+		defer dbSession.Close()
+		favorites := dbSession.DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+
 		var userFavorites UserFavorites
 		findErr := favorites.FindId(userId).One(&userFavorites)
 		if findErr != nil {
@@ -208,7 +224,10 @@ func (s *Server) DelFavorite() http.HandlerFunc {
 		userId := mux.Vars(r)["userId"]
 		planId := mux.Vars(r)["planId"]
 
-		favorites := s.Session.Copy().DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+		dbSession := s.Session.Copy()
+		defer dbSession.Close()
+		favorites := dbSession.DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+
 		var userFavorites UserFavorites
 		findErr := favorites.FindId(userId).One(&userFavorites)
 		if findErr != nil {

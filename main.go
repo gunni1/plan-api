@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"github.com/gorilla/mux"
 	"github.com/gunni1/plan-api/api"
@@ -15,10 +16,14 @@ const (
 )
 
 func main() {
+	//Define mandatory environment variables
 	mgoUrl := os.Getenv(dbEnv)
 	if mgoUrl == "" {
 		log.Fatalf("Environment variable %s is empty", dbEnv)
 	}
+	//Define Flags
+	port := flag.String("p", "8080", "REST-API Port")
+	flag.Parse()
 
 	session, err := mgo.Dial(mgoUrl)
 	if err != nil {
@@ -32,7 +37,7 @@ func main() {
 		Session: session,
 	}
 	server.Routes()
-	addr := "0.0.0.0:8080"
+	addr := "0.0.0.0:" + *port
 	log.Printf("Starting listening on %s", addr)
 	log.Fatal(http.ListenAndServe(addr, server.Router))
 }

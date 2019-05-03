@@ -33,6 +33,11 @@ func (s *Server) Routes() {
 			HandlerFunc: s.UpdatePlan(),
 		},
 		Route{
+			Method:      "DELETE",
+			Pattern:     "/plan/{planId}",
+			HandlerFunc: s.DeletePlan(),
+		},
+		Route{
 			Method:      "GET",
 			Pattern:     "/userplans/{userId}",
 			HandlerFunc: s.GetUserPlans(),

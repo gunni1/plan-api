@@ -123,6 +123,35 @@ func (s *Server) UpdatePlan() http.HandlerFunc {
 	}
 }
 
+// Deletes a plan
+func (s *Server) DeletePlan() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		parameters := mux.Vars(r)
+		planId := parameters["planId"]
+		if !objectIdRegEx.MatchString(planId) {
+			SendErrorJSON(http.StatusBadRequest, ERR_INVALID_PLAN_ID, w)
+			return
+		}
+
+		planObjectId := bson.ObjectIdHex(planId)
+
+		dbSession := s.Session.Copy()
+		defer dbSession.Close()
+		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
+
+		if hasPlan(plans, planObjectId) {
+			err := plans.RemoveId(planObjectId)
+			if err != nil {
+				SendErrorJSON(http.StatusBadRequest, err.Error(), w)
+			} else {
+				NewResponse(http.StatusOK, nil).SendJSON(w)
+			}
+		} else {
+			SendErrorJSON(http.StatusBadRequest, ERR_NO_PLAN_FOUND, w)
+		}
+	}
+}
+
 // Gets all Plans created by a given user. Sorted by title.
 func (s *Server) GetUserPlans() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

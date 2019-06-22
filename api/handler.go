@@ -77,6 +77,15 @@ func (s *Server) SavePlan() http.HandlerFunc {
 		defer dbSession.Close()
 		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
 
+		//Check if plan with this title already exists
+		sameTitlePlans := []Plan{}
+		checkTitleErr := plans.Find(bson.M{"createdBy": requestDto.CreatedBy, "title": requestDto.Title}).All(&sameTitlePlans)
+		if checkTitleErr != nil || len(sameTitlePlans) > 0 {
+			SendErrorJSON(http.StatusBadRequest, ERR_TITLE_ALREADY_EXISTS, w)
+			return
+		}
+
+		//Save plan with generated id
 		requestDto.Id = bson.NewObjectId()
 		saveError := plans.Insert(&requestDto)
 		if saveError != nil {

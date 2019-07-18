@@ -143,7 +143,6 @@ func (s *Server) DeletePlan() http.HandlerFunc {
 		}
 
 		planObjectId := bson.ObjectIdHex(planId)
-
 		dbSession := s.Session.Copy()
 		defer dbSession.Close()
 		plans := dbSession.DB(PLAN_DB_NAME).C(PLAN_COLLECTION_NAME)
@@ -153,6 +152,7 @@ func (s *Server) DeletePlan() http.HandlerFunc {
 			if err != nil {
 				SendErrorJSON(http.StatusBadRequest, err.Error(), w)
 			} else {
+				removeFavoriteEntryForEveryOne(dbSession, planId)
 				NewResponse(http.StatusOK, nil).SendJSON(w)
 			}
 		} else {
@@ -271,7 +271,7 @@ func (s *Server) DelFavorite() http.HandlerFunc {
 		if findErr != nil {
 			SendErrorJSON(http.StatusBadRequest, ERR_NO_FAVORITES_FOR_USER, w)
 		} else {
-			index := getIndex(userFavorites.FavoritePlans, planId)
+			index := userFavorites.indexOfPlan(planId)
 			if index == -1 {
 				SendErrorJSON(http.StatusBadRequest, ERR_FAVORITE_NOT_FOUND, w)
 			} else {
@@ -284,13 +284,34 @@ func (s *Server) DelFavorite() http.HandlerFunc {
 	}
 }
 
-func getIndex(s []string, e string) int {
-	for i, v := range s {
-		if v == e {
+func removeFavoriteEntryForEveryOne(session *mgo.Session, deletedPlan string) {
+	favorites := session.DB(PLAN_DB_NAME).C(FAVORITES_COLLECTION_NAME)
+	var userFavorites []UserFavorites
+	findErr := favorites.Find(bson.M{"favoritePlans": deletedPlan}).All(&userFavorites)
+	if findErr == nil {
+		for _, userFavs := range userFavorites {
+			deletedFavIdx := userFavs.indexOfPlan(deletedPlan)
+			if deletedFavIdx != -1 {
+				updatedFavs := remove(userFavs.FavoritePlans, deletedFavIdx)
+				userFavs.FavoritePlans = updatedFavs
+				favorites.UpdateId(userFavs.UserId, userFavs)
+			}
+		}
+	}
+}
+
+func (userFav UserFavorites) indexOfPlan(planId string) int {
+	for i, favId := range userFav.FavoritePlans {
+		if favId == planId {
 			return i
 		}
 	}
 	return -1
+}
+
+func remove(slice []string, i int) []string {
+	copy(slice[i:], slice[i+1:])
+	return slice[:len(slice)-1]
 }
 
 func hasPlan(plans *mgo.Collection, planId bson.ObjectId) bool {

@@ -28,4 +28,4 @@ jobs:
       run: go build -v .
 
     - name: Docker-Build
-      run: docker build -t gunni1/plan-api:${{VERSION}} .
+      run: docker build -t gunni1/plan-api:$VERSION .
